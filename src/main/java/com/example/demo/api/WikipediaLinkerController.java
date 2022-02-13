@@ -24,6 +24,8 @@ public class WikipediaLinkerController {
 
     @PostMapping
     public void addWikipediaLinker(@Valid @NonNull @RequestBody WikipediaLinker wikipediaLinker) {
+        System.out.println("Posting through Controller and asking Service to proceed");
+        System.out.println("Also your current id is... " + wikipediaLinker.getId());
         wikipediaLinkerService.addWikipediaLinkerTask(wikipediaLinker);
     }
 

@@ -21,6 +21,7 @@ public class WikipediaLinkerService {
     }
 
     public int addWikipediaLinkerTask(WikipediaLinker wikipediaLinker) {
+        System.out.println("Service woke up, asking DAO to proceed");
         return wikipediaLinkerDao.insertWikipediaLinkerTask(wikipediaLinker);
     }
 

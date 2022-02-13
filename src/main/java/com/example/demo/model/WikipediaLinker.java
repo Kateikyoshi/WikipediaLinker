@@ -31,15 +31,20 @@ public class WikipediaLinker {
     public WikipediaLinker(@JsonProperty("starterPageTitle") String starterPageTitle,
                            @JsonProperty("targetPageTitle") String targetPageTitle,
                            @JsonProperty("id") UUID id) {
+        System.out.println("Using 1st constructor");
         this.starterPageTitle = starterPageTitle;
         this.targetPageTitle = targetPageTitle;
         this.id = id;
         soughtForLinks = linkPages();
     }
 
-    public WikipediaLinker(WikipediaLinker wikipediaLinker) {
-        this.id = wikipediaLinker.getId();
-
+    public WikipediaLinker(WikipediaLinker wikipediaLinker, UUID id) {
+        System.out.println("Using 2nd constructor");
+        if (wikipediaLinker.getId() == null) {
+            this.id = id;
+        } else {
+            this.id = wikipediaLinker.getId();
+        }
         this.starterPageTitle = wikipediaLinker.starterPageTitle;
         this.targetPageTitle = wikipediaLinker.getTargetPageTitle();
         this.soughtForLinks = wikipediaLinker.soughtForLinks;

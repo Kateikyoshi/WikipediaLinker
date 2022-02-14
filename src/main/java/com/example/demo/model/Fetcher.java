@@ -1,5 +1,6 @@
 package com.example.demo.model;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -11,10 +12,8 @@ import java.util.*;
 public class Fetcher {
 
     public static SearchResult fetchWikiPage(SearchResult queryLink, String targetPageTitle,
-                                             BufferedWriter bufferedWriter, Map<SearchResult, SearchResult> cachedResults) {
-        //fills unqueried page 'queryLink' with children
+                                             BufferedWriter bufferedWriter, Cache<SearchResult, SearchResult> cachedResults) {
         checkIfInCache(queryLink, cachedResults);
-
         if (queryLink.getChildren().isEmpty()) {
             Elements links = attemptQuery(fixHref(queryLink.getHref()));
             if (links == null) {
@@ -33,8 +32,9 @@ public class Fetcher {
                     }
                 }
             }
-            saveToFile(queryLink, bufferedWriter);
+            saveToFileAndCache(queryLink, bufferedWriter, cachedResults);
         } else {
+            System.out.println("Was cached");
             for (var link : queryLink.getChildren()) {
                 if (link.getTitle().equals(targetPageTitle)) {
                     queryLink.setRightOne();
@@ -105,7 +105,13 @@ public class Fetcher {
         return false;
     }
 
-     private static synchronized void saveToFile(SearchResult parent, BufferedWriter bufferedWriter) {
+     private static synchronized void saveToFileAndCache(SearchResult parent,
+                                                         BufferedWriter bufferedWriter,
+                                                         Cache<SearchResult, SearchResult> cachedResults) {
+        var cacheResult = cachedResults.get(parent, k -> k);
+        if (cacheResult.getChildren() == null) {
+            cachedResults.put(parent, parent);
+        }
         try {
             //separating previous page from old pages
             bufferedWriter.append("-NEW PAGE-");
@@ -127,10 +133,10 @@ public class Fetcher {
         }
     }
 
-    private static void checkIfInCache(SearchResult queryLink, Map<SearchResult, SearchResult> cachedResults) {
-        var cacheResult = cachedResults.get(queryLink); //non synchronized check of cache
-        if (cacheResult != null) {
-            for (var cacheChild : cacheResult) {
+    private static void checkIfInCache(SearchResult queryLink, Cache<SearchResult, SearchResult> cachedResults) {
+        var cacheResult = cachedResults.get(queryLink, k -> k);
+        if (cacheResult.getChildren() != null) {
+            for (var cacheChild : cacheResult.getChildren()) {
                 cacheChild.setParent(queryLink);
                 queryLink.addChild(cacheChild);
             }
@@ -138,7 +144,6 @@ public class Fetcher {
     }
 
     private static String fixTitle(String title) {
-        //System.out.println("Title to fix: " + title);
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < title.length(); ++i) {
             if (title.charAt(i) == '/') {

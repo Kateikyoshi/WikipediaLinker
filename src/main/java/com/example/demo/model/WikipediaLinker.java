@@ -1,6 +1,8 @@
 package com.example.demo.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.validation.annotation.Validated;
 
 import javax.validation.constraints.NotBlank;
@@ -110,10 +112,11 @@ public class WikipediaLinker {
         return pathnames != null ? pathnames.length : 0;
     }
 
-    private static Map<SearchResult, SearchResult> loadCache(int lastFileIndex) {
+    private static Cache<SearchResult, SearchResult> loadCache(int lastFileIndex) {
         System.out.println("Filling cache");
-        Map<SearchResult, SearchResult> cachedResults = new HashMap<>();
-        int duplicateCount = 1;
+        Cache<SearchResult, SearchResult> cachedResults = Caffeine.newBuilder()
+                .maximumSize(50000)
+                .build();
         try {
             for (int i = 1; i <= lastFileIndex; i++) {
                 Path path = Path.of(createFileName(i));
@@ -125,9 +128,7 @@ public class WikipediaLinker {
                     String currentLine = in.nextLine();
                     if (currentLine.equals("-NEW PAGE-")) {
                         if (currentResult != null) {
-                            if (cachedResults.putIfAbsent(currentResult, currentResult) != null) {
-                                ++duplicateCount;
-                            }
+                            cachedResults.put(currentResult, currentResult);
                         }
                         readPageTitle = true;
                     } else if (readPageTitle) {
@@ -146,7 +147,6 @@ public class WikipediaLinker {
             System.out.println("Cache is ruined");
             return null;
         }
-        System.out.println("Discarded " + duplicateCount + " duplicates");
         return cachedResults;
     }
 
@@ -156,7 +156,7 @@ public class WikipediaLinker {
 
     private static Deque<LinkElements> concurrentBFS(int MAX_DEPTH, String starterPageTitle, String targetPageTitle) {
         createDirectory();
-        final var cachedResults = loadCache(numberOfFilesInAFolder());
+        var cachedResults = loadCache(numberOfFilesInAFolder());
         var bufferedWriter = getWriter();
 
         Deque<LinkElements> soughtForLinks = new LinkedList<>();

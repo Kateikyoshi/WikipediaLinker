@@ -10,12 +10,10 @@ public interface WikipediaLinkerDao {
     int insertWikipediaLinkerTask(WikipediaLinker wikipediaLinker, UUID id);
 
     default int insertWikipediaLinkerTask(WikipediaLinker wikipediaLinker) {
-        System.out.println("Inserting DAO interface default");
         UUID id = wikipediaLinker.getId();
         if (id == null) {
             id = UUID.randomUUID();
         }
-        System.out.println("Generated id is... " + id);
         return insertWikipediaLinkerTask(wikipediaLinker, id);
     }
 

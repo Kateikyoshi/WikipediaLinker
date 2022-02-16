@@ -1,15 +1,20 @@
 package com.example.demo.model;
 
 import com.github.benmanes.caffeine.cache.Cache;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.io.*;
-import java.util.*;
+import java.io.BufferedWriter;
+import java.io.IOException;
 
 public class Fetcher {
+    private final static Logger log = LogManager.getLogger();
 
     public static SearchResult fetchWikiPage(SearchResult queryLink, String targetPageTitle,
                                              BufferedWriter bufferedWriter, Cache<SearchResult, SearchResult> cachedResults) {
@@ -28,17 +33,16 @@ public class Fetcher {
                     queryLink.addChild(temp);
                     if (tempTitle.equals(targetPageTitle)) {
                         queryLink.setRightOne();
-                        System.out.println("FOUND on the internet, on " + queryLink.getTitle());
+                        log.debug("FOUND on the internet, on " + queryLink.getTitle());
                     }
                 }
             }
             saveToFileAndCache(queryLink, bufferedWriter, cachedResults);
         } else {
-            System.out.println("Was cached");
             for (var link : queryLink.getChildren()) {
                 if (link.getTitle().equals(targetPageTitle)) {
                     queryLink.setRightOne();
-                    System.out.println("FOUND in the file, on " + queryLink.getHref());
+                    log.debug("FOUND in the file, on " + queryLink.getHref());
                 }
             }
         }
@@ -47,7 +51,7 @@ public class Fetcher {
 
     public static Elements attemptQuery(String request) {
         try {
-            System.out.println("Accessing page: " + request);
+            log.debug("Accessing page: " + request);
             Document doc = Jsoup
                     .connect(request)
                     .userAgent(
@@ -55,7 +59,7 @@ public class Fetcher {
                     .timeout(50000).get();
             return doc.select("a[href]");
         } catch (IOException e) {
-            System.out.println("Faulty query: " + request);
+            log.error("Faulty query: " + request);
             e.printStackTrace();
             return null;
         }

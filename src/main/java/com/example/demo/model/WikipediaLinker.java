@@ -3,7 +3,8 @@ package com.example.demo.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import org.springframework.validation.annotation.Validated;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.validation.constraints.NotBlank;
 import java.io.BufferedWriter;
@@ -17,9 +18,10 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.UUID;
+
 
 public class WikipediaLinker {
+    private final static Logger log = LogManager.getLogger();
 
     private final UUID id;
 
@@ -33,7 +35,6 @@ public class WikipediaLinker {
     public WikipediaLinker(@JsonProperty("starterPageTitle") String starterPageTitle,
                            @JsonProperty("targetPageTitle") String targetPageTitle,
                            @JsonProperty("id") UUID id) {
-        System.out.println("Using 1st constructor");
         this.starterPageTitle = starterPageTitle;
         this.targetPageTitle = targetPageTitle;
         this.id = id;
@@ -41,7 +42,6 @@ public class WikipediaLinker {
     }
 
     public WikipediaLinker(WikipediaLinker wikipediaLinker, UUID id) {
-        System.out.println("Using 2nd constructor");
         if (wikipediaLinker.getId() == null) {
             this.id = id;
         } else {
@@ -68,7 +68,7 @@ public class WikipediaLinker {
         long startTime = System.currentTimeMillis();
         final int MAX_DEPTH = 5;
         Deque<LinkElements> soughtForLinks = concurrentBFS(MAX_DEPTH, starterPageTitle, targetPageTitle);
-        System.out.println("Completion time: " + (System.currentTimeMillis() - startTime) + " ms");
+        log.info("Search completion time: " + (System.currentTimeMillis() - startTime) + " ms");
         return soughtForLinks;
     }
 
@@ -82,8 +82,8 @@ public class WikipediaLinker {
                 Path realFilePath = Paths.get(newFileName);
                 FileChannel fileChannel = FileChannel.open(realFilePath);
                 long realFileSize = fileChannel.size();
-                System.out.println("File " + newFileName + " size is " + realFileSize + " bytes");
-                System.out.println("or " + realFileSize / 1024 + "Kb, or " + realFileSize / 1024 / 1024 + "Mb");
+                log.debug("File " + newFileName + " size is " + realFileSize + " bytes " +
+                        "or " + realFileSize / 1024 + "Kb, or " + realFileSize / 1024 / 1024 + "Mb");
                 //if last file was filled to 256 Mb or more, make new one for this program cycle
                 if (realFileSize > MAX_FILE_SIZE) {
                     ++lastFileIndex;
@@ -102,7 +102,7 @@ public class WikipediaLinker {
     private static void createDirectory() {
         File directory = new File(".//searchResults//");
         if (directory.mkdir()) {
-            System.out.println("Directory missing, creating...");
+            log.debug("Directory missing, creating...");
         }
     }
 
@@ -113,7 +113,7 @@ public class WikipediaLinker {
     }
 
     private static Cache<SearchResult, SearchResult> loadCache(int lastFileIndex) {
-        System.out.println("Filling cache");
+        log.debug("Filling cache");
         Cache<SearchResult, SearchResult> cachedResults = Caffeine.newBuilder()
                 .maximumSize(50000)
                 .build();
@@ -144,7 +144,7 @@ public class WikipediaLinker {
                     cachedResults.put(currentResult, currentResult);
             }
         } catch (IOException e) {
-            System.out.println("Cache is ruined");
+            log.error("Cache is ruined");
             return null;
         }
         return cachedResults;
@@ -168,7 +168,7 @@ public class WikipediaLinker {
         Set<String> majorListForDuplicates = new HashSet<>();
 
         while (level <= MAX_DEPTH && !isFound) {
-            System.out.println("Forming lvl " + level + " tasks");
+            log.debug("Forming lvl " + level + " tasks");
             Stack<Callable<SearchResult>> tasks = new Stack<>();
             for (SearchResult node : coreNode) {
                 if (node.isLeaf() && node.getLevel() == level) {
@@ -209,7 +209,7 @@ public class WikipediaLinker {
                     soughtForLinks.addFirst(new LinkElements(wantedNode.getHref(), wantedNode.getTitle()));
                     wantedNode = wantedNode.parent;
                 }
-                System.out.println("Found in this batch, aborting");
+                log.debug("Found in this batch, aborting");
                 return true;
             }
             ++batchCounter;
@@ -226,7 +226,7 @@ public class WikipediaLinker {
             for (int i = 0; i < batchSize && !tasks.empty(); i++) {
                 subTasks.push(tasks.pop());
             }
-            System.out.println("Batch #" + batchCounter + " is being queried...");
+            log.debug("Batch #" + batchCounter + " is being queried...");
             List<Future<SearchResult>> concurFetchResults = executorService.invokeAll(subTasks);
             for (Future<SearchResult> concurFetchResult : concurFetchResults) {
                 var futureResult =  concurFetchResult.get();

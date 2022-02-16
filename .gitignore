@@ -34,3 +34,7 @@ build/
 
 ### Cached pages ###
 /searchResults
+
+### Logs ###
+*.log
+

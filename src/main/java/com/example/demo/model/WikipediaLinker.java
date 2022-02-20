@@ -19,7 +19,6 @@ import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.concurrent.*;
 
-
 public class WikipediaLinker {
     private final static Logger log = LogManager.getLogger();
 
@@ -84,7 +83,6 @@ public class WikipediaLinker {
                 long realFileSize = fileChannel.size();
                 log.debug("File " + newFileName + " size is " + realFileSize + " bytes " +
                         "or " + realFileSize / 1024 + "Kb, or " + realFileSize / 1024 / 1024 + "Mb");
-                //if last file was filled to 256 Mb or more, make new one for this program cycle
                 if (realFileSize > MAX_FILE_SIZE) {
                     ++lastFileIndex;
                     newFileName = createFileName(lastFileIndex);

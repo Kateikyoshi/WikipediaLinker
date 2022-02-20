@@ -97,7 +97,6 @@ public class Fetcher {
                 !link.attr("title").contains("(disambiguation)") &&
                 !link.attr("title").contains("the content page") &&
                 !link.attr("title").equals("");
-        //!link.attr("title").equals("Category:");
     }
 
     private static boolean isDuplicate(SearchResult result, String target) {
@@ -117,10 +116,8 @@ public class Fetcher {
             cachedResults.put(parent, parent);
         }
         try {
-            //separating previous page from old pages
             bufferedWriter.append("-NEW PAGE-");
             bufferedWriter.newLine();
-            //first two lines are for parent, next lines are for children
             bufferedWriter.append(parent.getTitle());
             bufferedWriter.newLine();
             bufferedWriter.append(parent.getHref());
@@ -145,33 +142,5 @@ public class Fetcher {
                 queryLink.addChild(cacheChild);
             }
         }
-    }
-
-    private static String fixTitle(String title) {
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < title.length(); ++i) {
-            if (title.charAt(i) == '/') {
-                builder.append("_u47");
-            } else if (title.charAt(i) == '<') {
-                builder.append("_u60");
-            } else if (title.charAt(i) == '>') {
-                builder.append("_u62");
-            } else if (title.charAt(i) == ':') {
-                builder.append("_u58");
-            } else if (title.charAt(i) == '\"') {
-                builder.append("_u34");
-            } else if (title.charAt(i) == '\\') {
-                builder.append("_u92");
-            } else if (title.charAt(i) == '|') {
-                builder.append("_u124");
-            } else if (title.charAt(i) == '?') {
-                builder.append("_u63");
-            } else if (title.charAt(i) == '*') {
-                builder.append("_u42");
-            } else {
-                builder.append(title.charAt(i));
-            }
-        }
-        return builder.toString();
     }
 }

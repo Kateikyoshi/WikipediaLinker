@@ -10,14 +10,14 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
+import java.util.Stack;
 
 public class Fetcher {
     private final static Logger log = LogManager.getLogger();
 
     public static SearchResult fetchWikiPage(SearchResult queryLink, String targetPageTitle,
-                                             BufferedWriter bufferedWriter, Cache<SearchResult, SearchResult> cachedResults) {
+                                             Stack<SearchResult> stack, Cache<SearchResult, SearchResult> cachedResults) {
         checkIfInCache(queryLink, cachedResults);
         if (queryLink.getChildren().isEmpty()) {
             Elements links = attemptQuery(fixHref(queryLink.getHref()));
@@ -37,7 +37,7 @@ public class Fetcher {
                     }
                 }
             }
-            saveToFileAndCache(queryLink, bufferedWriter, cachedResults);
+            saveToStackAndCache(queryLink, stack, cachedResults);
         } else {
             for (var link : queryLink.getChildren()) {
                 if (link.getTitle().equals(targetPageTitle)) {
@@ -108,35 +108,19 @@ public class Fetcher {
         return false;
     }
 
-     private static synchronized void saveToFileAndCache(SearchResult parent,
-                                                         BufferedWriter bufferedWriter,
+     private static synchronized void saveToStackAndCache(SearchResult parent,
+                                                         Stack<SearchResult> stack,
                                                          Cache<SearchResult, SearchResult> cachedResults) {
-        var cacheResult = cachedResults.get(parent, k -> k);
-        if (cacheResult.getChildren() == null) {
+        var cacheResult = cachedResults.getIfPresent(parent);
+        if (cacheResult == null) {
             cachedResults.put(parent, parent);
-        }
-        try {
-            bufferedWriter.append("-NEW PAGE-");
-            bufferedWriter.newLine();
-            bufferedWriter.append(parent.getTitle());
-            bufferedWriter.newLine();
-            bufferedWriter.append(parent.getHref());
-            bufferedWriter.newLine();
-            for (var child : parent.getChildren()) {
-                bufferedWriter.append(child.getTitle());
-                bufferedWriter.newLine();
-                bufferedWriter.append(child.getHref());
-                bufferedWriter.newLine();
-            }
-            bufferedWriter.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
+            stack.push(parent);
         }
     }
 
     private static void checkIfInCache(SearchResult queryLink, Cache<SearchResult, SearchResult> cachedResults) {
-        var cacheResult = cachedResults.get(queryLink, k -> k);
-        if (cacheResult.getChildren() != null) {
+        var cacheResult = cachedResults.getIfPresent(queryLink);
+        if (cacheResult != null) {
             for (var cacheChild : cacheResult.getChildren()) {
                 cacheChild.setParent(queryLink);
                 queryLink.addChild(cacheChild);

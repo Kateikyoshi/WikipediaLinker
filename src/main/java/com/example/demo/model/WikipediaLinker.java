@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.tomcat.util.collections.SynchronizedStack;
 
 import javax.validation.constraints.NotBlank;
 import java.io.BufferedWriter;
@@ -81,8 +82,7 @@ public class WikipediaLinker {
                 Path realFilePath = Paths.get(newFileName);
                 FileChannel fileChannel = FileChannel.open(realFilePath);
                 long realFileSize = fileChannel.size();
-                log.debug("File " + newFileName + " size is " + realFileSize + " bytes " +
-                        "or " + realFileSize / 1024 + "Kb, or " + realFileSize / 1024 / 1024 + "Mb");
+                log.debug("File " + newFileName + " size is " + realFileSize + " bytes");
                 if (realFileSize > MAX_FILE_SIZE) {
                     ++lastFileIndex;
                     newFileName = createFileName(lastFileIndex);
@@ -155,7 +155,11 @@ public class WikipediaLinker {
     private static Deque<LinkElements> concurrentBFS(int MAX_DEPTH, String starterPageTitle, String targetPageTitle) {
         createDirectory();
         var cachedResults = loadCache(numberOfFilesInAFolder());
-        var bufferedWriter = getWriter();
+        var stack = new Stack<SearchResult>();
+
+        var scheduledFileUpdater = Executors.newSingleThreadScheduledExecutor();
+        Runnable fileUpdater = () -> updateFileContents(stack);
+        scheduledFileUpdater.scheduleAtFixedRate(fileUpdater, 5, 10, TimeUnit.MINUTES);
 
         Deque<LinkElements> soughtForLinks = new LinkedList<>();
 
@@ -171,7 +175,7 @@ public class WikipediaLinker {
             for (SearchResult node : coreNode) {
                 if (node.isLeaf() && node.getLevel() == level) {
                     if (majorListForDuplicates.add(node.getTitle())) {
-                        Callable<SearchResult> task = () -> Fetcher.fetchWikiPage(node, targetPageTitle, bufferedWriter, cachedResults);
+                        Callable<SearchResult> task = () -> Fetcher.fetchWikiPage(node, targetPageTitle, stack, cachedResults);
                         tasks.push(task);
                     }
                 }
@@ -180,13 +184,9 @@ public class WikipediaLinker {
             ++level;
         }
         executorService.shutdown();
-        try {
-            if (bufferedWriter != null) {
-                bufferedWriter.close();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        scheduledFileUpdater.shutdown();
+        updateFileContents(stack);
+
         return soughtForLinks;
     }
 
@@ -238,5 +238,38 @@ public class WikipediaLinker {
             e.printStackTrace();
         }
         return null;
+    }
+
+    private static void updateFileContents(Stack<SearchResult> stack) {
+        var bufferedWriter = getWriter();
+        if (bufferedWriter == null) {
+            log.debug("Empty file writer, something went wrong");
+            return;
+        }
+        log.debug("Updating file contents, " + stack.size() + " new elements to add");
+        try {
+            while (!stack.empty()) {
+                var parent = stack.pop();
+
+                bufferedWriter.append("-NEW PAGE-");
+                bufferedWriter.newLine();
+                bufferedWriter.append(parent.getTitle());
+                bufferedWriter.newLine();
+                bufferedWriter.append(parent.getHref());
+                bufferedWriter.newLine();
+                for (var child : parent.getChildren()) {
+                    bufferedWriter.append(child.getTitle());
+                    bufferedWriter.newLine();
+                    bufferedWriter.append(child.getHref());
+                    bufferedWriter.newLine();
+                }
+                bufferedWriter.flush();
+            }
+            bufferedWriter.close();
+        } catch (IOException e) {
+                e.printStackTrace();
+                log.debug("Failed updating file contents");
+        }
+        log.debug("File update successful");
     }
 }

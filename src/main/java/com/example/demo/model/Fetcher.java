@@ -11,13 +11,14 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
+import java.util.Deque;
 import java.util.Stack;
 
 public class Fetcher {
     private final static Logger log = LogManager.getLogger();
 
     public static SearchResult fetchWikiPage(SearchResult queryLink, String targetPageTitle,
-                                             Stack<SearchResult> stack, Cache<SearchResult, SearchResult> cachedResults) {
+                                             Deque<SearchResult> stack, Cache<SearchResult, SearchResult> cachedResults) {
         checkIfInCache(queryLink, cachedResults);
         if (queryLink.getChildren().isEmpty()) {
             Elements links = attemptQuery(fixHref(queryLink.getHref()));
@@ -109,7 +110,7 @@ public class Fetcher {
     }
 
      private static synchronized void saveToStackAndCache(SearchResult parent,
-                                                         Stack<SearchResult> stack,
+                                                         Deque<SearchResult> stack,
                                                          Cache<SearchResult, SearchResult> cachedResults) {
         var cacheResult = cachedResults.getIfPresent(parent);
         if (cacheResult == null) {

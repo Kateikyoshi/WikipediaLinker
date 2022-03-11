@@ -155,7 +155,7 @@ public class WikipediaLinker {
     private static Deque<LinkElements> concurrentBFS(int MAX_DEPTH, String starterPageTitle, String targetPageTitle) {
         createDirectory();
         var cachedResults = loadCache(numberOfFilesInAFolder());
-        var stack = new Stack<SearchResult>();
+        var stack = new LinkedList<SearchResult>();
 
         var scheduledFileUpdater = Executors.newSingleThreadScheduledExecutor();
         Runnable fileUpdater = () -> updateFileContents(stack);
@@ -240,7 +240,7 @@ public class WikipediaLinker {
         return null;
     }
 
-    private static void updateFileContents(Stack<SearchResult> stack) {
+    private static void updateFileContents(Deque<SearchResult> stack) {
         var bufferedWriter = getWriter();
         if (bufferedWriter == null) {
             log.debug("Empty file writer, something went wrong");
@@ -248,7 +248,7 @@ public class WikipediaLinker {
         }
         log.debug("Updating file contents, " + stack.size() + " new elements to add");
         try {
-            while (!stack.empty()) {
+            while (stack.peek() != null) {
                 var parent = stack.pop();
 
                 bufferedWriter.append("-NEW PAGE-");

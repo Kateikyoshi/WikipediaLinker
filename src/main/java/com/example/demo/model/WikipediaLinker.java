@@ -155,13 +155,13 @@ public class WikipediaLinker {
     private static Deque<LinkElements> concurrentBFS(int MAX_DEPTH, String starterPageTitle, String targetPageTitle) {
         createDirectory();
         var cachedResults = loadCache(numberOfFilesInAFolder());
-        var stack = new LinkedList<SearchResult>();
+        Deque<SearchResult> stack = new ArrayDeque<>();
 
         var scheduledFileUpdater = Executors.newSingleThreadScheduledExecutor();
         Runnable fileUpdater = () -> updateFileContents(stack);
         scheduledFileUpdater.scheduleAtFixedRate(fileUpdater, 5, 10, TimeUnit.MINUTES);
 
-        Deque<LinkElements> soughtForLinks = new LinkedList<>();
+        Deque<LinkElements> soughtForLinks = new ArrayDeque<>();
 
         boolean isFound = false;
         int level = 0;

@@ -5,7 +5,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.tomcat.util.collections.SynchronizedStack;
 
 import javax.validation.constraints.NotBlank;
 import java.io.BufferedWriter;

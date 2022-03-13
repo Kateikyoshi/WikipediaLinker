@@ -1,20 +1,17 @@
 package com.example.demo.model;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 public class SearchResult implements Comparable<SearchResult>, Iterable<SearchResult> {
     private final LinkElements linkElements;
-    public List<SearchResult> children;
+    public Set<SearchResult> children;
     private boolean isRightOne;
     public SearchResult parent;
 
     public SearchResult(String href, String title) {
         isRightOne = false;
         linkElements = new LinkElements(href, title);
-        children = Collections.synchronizedList(new ArrayList<>()); //switch for a HashSet or SyncQueue?
+        children = new java.util.concurrent.CopyOnWriteArraySet<>();
     }
 
     public boolean isRoot() {
@@ -22,10 +19,10 @@ public class SearchResult implements Comparable<SearchResult>, Iterable<SearchRe
     }
 
     public boolean isLeaf() {
-        return children.size() == 0;
+        return children.isEmpty();
     }
 
-    public synchronized void addChild(SearchResult child) {
+    public void addChild(SearchResult child) {
         this.children.add(child);
     }
 
@@ -33,7 +30,7 @@ public class SearchResult implements Comparable<SearchResult>, Iterable<SearchRe
         this.parent = parent;
     }
 
-    public List<SearchResult> getChildren() {
+    public Set<SearchResult> getChildren() {
         return children;
     }
 
